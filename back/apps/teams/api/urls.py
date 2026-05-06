@@ -22,3 +22,4 @@ urlpatterns = [
     path('add-player/', team_add_player_api, name='add-player'),
     path('remove-player/', team_remove_player_api, name='remove-player'),
 ]
+#r
