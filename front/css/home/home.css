@@ -105,3 +105,46 @@
     position: relative;
     overflow: hidden;
 }
+
+/* Glowing corner accents */
+.hero-card::before,
+.hero-card::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--neon-blue);
+}
+
+.hero-card::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.hero-card::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+}
+
+.hero-card-inner {
+    padding: 32px;
+}
+
+.hero-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.hero-card-title {
+    font-size: 0.9rem;
+    color: var(--text-gray);
+    letter-spacing: 3px;
+}
