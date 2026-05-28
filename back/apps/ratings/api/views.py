@@ -74,3 +74,20 @@ def rating_list_api(request, match_pk):
         }
         ratings_list.append(data)
     return HttpResponse(json.dumps(ratings_list), content_type="application/json")
+
+
+@csrf_exempt
+def rating_detail_api(request, pk):
+    rating = Rating.objects.filter(id=pk).first()
+    if not rating:
+        return JsonResponse({'error': 'Rating not found'}, status=404)
+
+    rating_data = {
+        'id': rating.id,
+        'match': rating.match.id,
+        'rater_user': rating.rater_user.full_name,
+        'rated_user': rating.rated_user.full_name,
+        'score': rating.score
+    }
+
+    return JsonResponse({'rating': rating_data})
