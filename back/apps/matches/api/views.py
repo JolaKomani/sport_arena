@@ -32,3 +32,24 @@ def match_list_api(request):
     matches = Match.objects.filter(squad_id=squad_id).order_by('-datetime')
     matches_list = serialize_matches(matches)
     return HttpResponse(json.dumps(matches_list), content_type="application/json")
+
+
+@csrf_exempt
+def match_detail_api(request, pk):
+    match = Match.objects.filter(id=pk).first()
+    if not match:
+        return HttpResponse("Match not found", status=404)
+
+    # Check access: public squads or user is admin/member
+    squad = match.squad
+    if squad:
+        user = request.user
+        if not squad.is_public:
+            if not user.is_authenticated:
+                return HttpResponse("Authentication required", status=401)
+            if user not in squad.admins.all() and user not in squad.members.all():
+                return HttpResponse("Access denied", status=403)
+
+    match_data = serialize_match(match)
+
+    return HttpResponse(json.dumps(match_data), content_type="application/json")
