@@ -101,3 +101,44 @@ def match_create_api(request):
         match.teams.add(team_obj)
 
     return HttpResponse("Match created successfully")
+
+
+@can_modify_squad_matches
+def match_update_api(request):
+    data = json.loads(request.body)
+
+    match_id = data.get("match_id")
+    if not match_id:
+        return HttpResponse("match_id is required", status=400)
+
+    match = Match.objects.filter(id=match_id).first()
+    if not match:
+        return HttpResponse("Match not found", status=404)
+
+    location = data.get("location")
+    datetime_str = data.get("datetime")
+
+    if location:
+        match.location = location
+    if datetime_str:
+        match.datetime = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M")
+
+    match.save()
+
+    teams = data.get("teams", [])
+
+    for team_data in teams:
+        team = Team.objects.get(id=team_data['id'])
+        name = team_data.get('name')
+        team.name = name
+        score = team_data.get('score')
+        if score is not None:
+            team.score = int(score) if score != '' else None
+        else:
+            team.score = None
+        team.save()
+        players = team_data.get('player_ids', [])
+        players = User.objects.filter(id__in=players)
+        team.members.set(players)
+
+    return HttpResponse(f"Match {match.id} updated successfully")
