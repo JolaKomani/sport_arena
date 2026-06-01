@@ -4,6 +4,7 @@ from .views import (
     match_detail_api,
    match_create_api,
     match_update_api,
+    match_delete_api,
 )
 
 app_name = "matches_api"
@@ -13,5 +14,6 @@ urlpatterns = [
     path('<int:pk>/', match_detail_api, name='detail'),
     path('create/', match_create_api, name='create'),
     path('update/', match_update_api, name='update'),
+    path('delete/', match_delete_api, name='delete'),
 ]
 
