@@ -1,6 +1,6 @@
 import json
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Avg
 
@@ -74,6 +74,80 @@ def rating_list_api(request, match_pk):
         }
         ratings_list.append(data)
     return HttpResponse(json.dumps(ratings_list), content_type="application/json")
+
+
+@csrf_exempt
+def rating_create_api(request):
+    """
+    Create a rating. If a rating already exists, it will be updated.
+    Requires authentication and that the rater is a player in the match.
+    """
+    if not request.user.is_authenticated:
+        return HttpResponse("Authentication required", status=401)
+
+    data = json.loads(request.body)
+    match_id = data.get('match_id')
+    rated_user_id = data.get('rated_user_id')
+    score = data.get('score')
+
+    if not all([match_id, rated_user_id, score]):
+        return HttpResponse("match_id, rated_user_id and score are required", status=400)
+
+    try:
+        score = int(score)
+        if score < 1 or score > 10:
+            return HttpResponse("Score must be between 1 and 10", status=400)
+    except (ValueError, TypeError):
+        return HttpResponse("Invalid score", status=400)
+
+    match = Match.objects.filter(id=match_id).first()
+    if not match:
+        return HttpResponse("Match not found", status=404)
+
+    # Check if rater and rated users are in the match
+    all_match_players = []
+    for team in match.teams.all():
+        all_match_players.extend(team.members.all())
+
+    if request.user not in all_match_players:
+        return HttpResponse("You must be a player in this match to rate", status=403)
+
+    rated_user = User.objects.filter(id=rated_user_id).first()
+    if not rated_user:
+        return HttpResponse("Rated user not found", status=404)
+
+    if rated_user not in all_match_players:
+        return HttpResponse("Rated user must be a player in this match", status=400)
+
+    # Allow self-rating (but it won't be included in average calculations)
+
+    # Get or create rating
+    rating, created = Rating.objects.get_or_create(
+        match=match,
+        rater_user=request.user,
+        rated_user=rated_user,
+        defaults={'score': score}
+    )
+
+    if not created:
+        rating.score = score
+        rating.save()
+
+    return HttpResponse(json.dumps({
+        'id': rating.id,
+        'match_id': match.id,
+        'rater_user': {
+            'id': rating.rater_user.id,
+            'name': rating.rater_user.full_name,
+            'email': rating.rater_user.email
+        },
+        'rated_user': {
+            'id': rating.rated_user.id,
+            'name': rating.rated_user.full_name,
+            'email': rating.rated_user.email
+        },
+        'rating': rating.score
+    }), content_type="application/json")
 
 
 @csrf_exempt
