@@ -165,3 +165,73 @@ def rating_detail_api(request, pk):
     }
 
     return JsonResponse({'rating': rating_data})
+
+
+@csrf_exempt
+def rating_update_api(request):
+    """
+    Update an existing rating. Requires authentication and that the rater owns the rating.
+    """
+    if not request.user.is_authenticated:
+        return HttpResponse("Authentication required", status=401)
+
+    data = json.loads(request.body)
+    rating_id = data.get('rating_id')
+    score = data.get('score')
+
+    if not rating_id:
+        return HttpResponse("rating_id is required", status=400)
+
+    if score is None:
+        return HttpResponse("score is required", status=400)
+
+    try:
+        score = int(score)
+        if score < 1 or score > 10:
+            return HttpResponse("Score must be between 1 and 10", status=400)
+    except (ValueError, TypeError):
+        return HttpResponse("Invalid score", status=400)
+
+    rating = Rating.objects.filter(id=rating_id).first()
+    if not rating:
+        return HttpResponse("Rating not found", status=404)
+
+    # Check that the current user is the rater
+    if rating.rater_user.id != request.user.id:
+        return HttpResponse("You can only update your own ratings", status=403)
+
+    rating.score = score
+    rating.save()
+
+    return HttpResponse(json.dumps({
+        'id': rating.id,
+        'match_id': rating.match.id,
+        'rater_user': {
+            'id': rating.rater_user.id,
+            'name': rating.rater_user.full_name,
+            'email': rating.rater_user.email
+        },
+        'rated_user': {
+            'id': rating.rated_user.id,
+            'name': rating.rated_user.full_name,
+            'email': rating.rated_user.email
+        },
+        'rating': rating.score
+    }), content_type="application/json")
+
+
+
+@csrf_exempt
+def rating_delete_api(request):
+    data = json.loads(request.body)
+    rating_id = data.get('rating_id')
+
+    if not rating_id:
+        return HttpResponse("Rating is required", status=404)
+
+    rating = Rating.objects.filter(id=rating_id).first()
+    if not rating:
+        return HttpResponse("Rating not found", status=404)
+
+    rating.delete()
+    return HttpResponse(f"Rating deleted successfully: {rating}")
