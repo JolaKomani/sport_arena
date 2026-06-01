@@ -218,3 +218,20 @@ def rating_update_api(request):
         },
         'rating': rating.score
     }), content_type="application/json")
+
+
+
+@csrf_exempt
+def rating_delete_api(request):
+    data = json.loads(request.body)
+    rating_id = data.get('rating_id')
+
+    if not rating_id:
+        return HttpResponse("Rating is required", status=404)
+
+    rating = Rating.objects.filter(id=rating_id).first()
+    if not rating:
+        return HttpResponse("Rating not found", status=404)
+
+    rating.delete()
+    return HttpResponse(f"Rating deleted successfully: {rating}")
