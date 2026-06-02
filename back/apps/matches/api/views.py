@@ -183,3 +183,29 @@ def match_add_player_api(request):
     match.save()
 
     return HttpResponse("user created successfully")
+
+
+@csrf_exempt
+def match_remove_player_api(request):
+    data = json.loads(request.body)
+
+    match_id = data.get('match_id')
+    user_id = data.get('user_id')
+
+    if not all((match_id, user_id)):
+        return HttpResponse("match_id, user_id are required", status=400)
+
+    match = Match.objects.filter(id=match_id).first()
+    if not match:
+        return HttpResponse("Match not found", status=404)
+
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return HttpResponse("User not found", status=404)
+
+    match.players.remove(user)
+    match.save()
+
+    return HttpResponse("user removed successfully")
+
+
