@@ -142,3 +142,20 @@ def match_update_api(request):
         team.members.set(players)
 
     return HttpResponse(f"Match {match.id} updated successfully")
+
+
+@can_modify_squad_matches
+def match_delete_api(request):
+    data = json.loads(request.body)
+    match_id = data.get("match_id")
+
+    if not match_id:
+        return HttpResponse("match_id is required", status=400)
+
+    match = Match.objects.filter(id=match_id).first()
+    if not match:
+        return HttpResponse("Match not found", status=404)
+
+    match.delete()
+
+    return HttpResponse("Match deleted successfully")
