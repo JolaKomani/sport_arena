@@ -6,6 +6,7 @@ from .views import (
     match_update_api,
     match_delete_api,
     match_add_player_api,
+    match_remove_player_api,
 )
 
 app_name = "matches_api"
@@ -17,5 +18,6 @@ urlpatterns = [
     path('update/', match_update_api, name='update'),
     path('delete/', match_delete_api, name='delete'),
     path('add-player/', match_add_player_api, name='add-player'),
+    path('remove-player/', match_remove_player_api, name='remove-player'),
 ]
 
