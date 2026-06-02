@@ -1,0 +1,44 @@
+/* ============================================
+   SPORT-ZONE Match Detail Page - "MATCH PROFILE"
+   Page-specific styles for match details view
+   ============================================ */
+
+/* ===== PAGE LAYOUT ===== */
+.match-detail-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== PAGE HERO ===== */
+.page-hero {
+    padding: 140px 0 60px; /* Account for navbar (88px) + breadcrumb (~40px) */
+    position: relative;
+}
+
+.page-hero .hero-content {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+    animation: fadeInUp 0.8s ease;
+}
+
+.page-hero h1 {
+    font-size: 4rem;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, var(--text-white) 0%, var(--text-gray) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ===== MATCH DETAIL SECTION ===== */
+.match-detail-section {
+    padding: 40px 0 80px;
+    flex: 1;
+}
+
+.detail-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
