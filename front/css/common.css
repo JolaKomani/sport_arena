@@ -174,3 +174,66 @@ a:hover {
     display: flex;
     align-items: center;
 }
+
+.breadcrumb-section .container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.breadcrumb-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex: 1;
+}
+
+.breadcrumb-item {
+    color: var(--text-gray);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.breadcrumb-item:hover {
+    color: var(--neon-blue);
+    text-shadow: var(--glow-blue);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-white);
+    font-weight: 700;
+}
+
+.breadcrumb-separator {
+    color: var(--text-dim);
+    margin: 0 4px;
+}
+
+.breadcrumb-section .btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.nav-links a {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    padding-bottom: 4px;
+}
