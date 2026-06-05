@@ -170,3 +170,92 @@ def user_me_api(request):
         'phone': user.phone,
         'full_name': user.full_name
     })
+
+
+@csrf_exempt
+def user_avg_rating_api(request):
+    data = json.loads(request.body)
+
+    player_id = data.get('player_id')
+
+    if not player_id:
+        return HttpResponse("player_id is required", status=400)
+
+    player = User.objects.filter(id=player_id).first()
+    if not player:
+        return HttpResponse("User not found", status=404)
+
+    ratings = player.received_ratings.all()
+
+    if not ratings.exists():
+        return HttpResponse("This player has no ratings yet", status=404)
+
+    avg_rating = ratings.aggregate(Avg('score'))['score__avg']
+
+    return HttpResponse(avg_rating)
+
+
+@csrf_exempt
+def players_avg_ratings_api(request):
+    """Get average ratings (by others, excluding self-ratings) for multiple players.
+    If squad_id is provided, only include ratings from matches in that squad."""
+    from apps.ratings.models import Rating
+    from apps.matches.models import Match
+
+    if request.method == 'GET':
+        player_ids = request.GET.get('player_ids', '')
+        squad_id = request.GET.get('squad_id')
+
+        if not player_ids:
+            return HttpResponse("player_ids parameter is required", status=400)
+
+        try:
+            player_id_list = [int(id.strip()) for id in player_ids.split(',') if id.strip()]
+        except ValueError:
+            return HttpResponse("Invalid player_ids format", status=400)
+
+        if not player_id_list:
+            return HttpResponse("No valid player IDs provided", status=400)
+
+        # Get matches for the squad if squad_id is provided
+        squad_matches = None
+        if squad_id:
+            try:
+                squad_id_int = int(squad_id)
+                from apps.squads.models import Squad
+                squad = Squad.objects.filter(id=squad_id_int).first()
+                if squad:
+                    squad_matches = Match.objects.filter(squad=squad)
+            except (ValueError, TypeError):
+                return HttpResponse("Invalid squad_id format", status=400)
+
+        players = User.objects.filter(id__in=player_id_list)
+        ratings_data = {}
+
+        for player in players:
+            # Base query for ratings by others (excluding self-ratings)
+            ratings_query = Rating.objects.filter(
+                rated_user=player
+            ).exclude(
+                rater_user=player
+            )
+
+            # Filter by squad matches if squad_id is provided
+            if squad_matches is not None:
+                ratings_query = ratings_query.filter(match__in=squad_matches)
+
+            # Get average rating
+            avg_rating = ratings_query.aggregate(avg=Avg('score'))['avg']
+
+            # Get rating count
+            rating_count = ratings_query.count()
+
+            ratings_data[player.id] = {
+                'player_id': player.id,
+                'average_rating': round(avg_rating, 2) if avg_rating else None,
+                'rating_count': rating_count
+            }
+
+        return JsonResponse(ratings_data)
+
+    return HttpResponse("Method not allowed", status=405)
