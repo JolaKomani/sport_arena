@@ -1,4 +1,5 @@
 from django.urls import path
+from .export_views import match_export_api
 from .views import (
     match_list_api,
     match_detail_api,
@@ -12,6 +13,7 @@ from .views import (
 app_name = "matches_api"
 
 urlpatterns = [
+    path('export/', match_export_api, name='export'),
     path('', match_list_api, name='list'),
     path('<int:pk>/', match_detail_api, name='detail'),
     path('create/', match_create_api, name='create'),
