@@ -118,3 +118,55 @@ def user_delete_api(request):
     user.delete()
     return HttpResponse('User deleted successfully')
 
+
+@csrf_exempt
+def user_login_api(request):
+    """Login API - uses Django's authenticate() and login()"""
+    data = json.loads(request.body)
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return HttpResponse('email and password are required', status=400)
+
+    # Use Django's authenticate() - pass email as 'username' since USERNAME_FIELD='email'
+    user = authenticate(request, username=email, password=password)
+
+    if user is None:
+        return HttpResponse('Invalid email or password', status=401)
+
+    login(request, user)
+
+    return JsonResponse({
+        'message': 'Login successful',
+        'user': {
+            'id': user.id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email
+        }
+    })
+
+
+@csrf_exempt
+def user_logout_api(request):
+    """Logout API - uses Django's logout()"""
+    logout(request)
+    return HttpResponse('Logged out successfully')
+
+
+@csrf_exempt
+def user_me_api(request):
+    """Get current logged in user via request.user"""
+    if not request.user.is_authenticated:
+        return HttpResponse('Not authenticated', status=401)
+
+    user = request.user
+    return JsonResponse({
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'phone': user.phone,
+        'full_name': user.full_name
+    })
