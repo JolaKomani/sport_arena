@@ -26,4 +26,5 @@ urlpatterns = [
     path('me/', user_me_api, name='me'),
     path('avg-rating/', user_avg_rating_api, name='avg-rating'),
     path('avg-ratings/', players_avg_ratings_api, name='avg-ratings'),
+    path('performance/', user_performance_api, name='performance'),
 ]

@@ -259,3 +259,133 @@ def players_avg_ratings_api(request):
         return JsonResponse(ratings_data)
 
     return HttpResponse("Method not allowed", status=405)
+
+
+@csrf_exempt
+def user_performance_api(request):
+    """Get performance statistics for the logged-in user"""
+    if not request.user.is_authenticated:
+        return HttpResponse("Authentication required", status=401)
+
+    from apps.matches.models import Match
+    from apps.ratings.models import Rating
+    from apps.teams.models import Team
+    from django.db.models import Avg, Q
+
+    user = request.user
+
+    # Get all matches where user played (user is in a team that's in a match)
+    user_teams = Team.objects.filter(members=user)
+    matches = Match.objects.filter(teams__in=user_teams).distinct().order_by('datetime')
+
+    # Calculate statistics
+    # Only count matches where all teams have scores filled
+    total_matches = 0
+    wins = 0
+    losses = 0
+    draws = 0
+    match_data = []
+
+    for match in matches:
+        # Get the team the user was in for this match
+        user_team = match.teams.filter(members=user).first()
+        if not user_team:
+            continue
+
+        user_team_score = user_team.score if user_team.score is not None else None
+
+        # Skip matches where user's team has no score
+        if user_team_score is None:
+            continue
+
+        # Check if all other teams have scores
+        other_teams = match.teams.exclude(id=user_team.id)
+        all_teams_have_scores = True
+        other_team_scores = []
+
+        for other_team in other_teams:
+            other_score = other_team.score if other_team.score is not None else None
+            if other_score is None:
+                all_teams_have_scores = False
+                break
+            other_team_scores.append(other_score)
+
+        # Only count matches where all teams have scores
+        if not all_teams_have_scores:
+            continue
+
+        total_matches += 1
+
+        # Determine result: win, loss, or draw
+        max_other_score = max(other_team_scores) if other_team_scores else -1
+        won = False
+        lost = False
+        draw = False
+
+        if user_team_score > max_other_score:
+            # User's team has the highest score - win
+            won = True
+            wins += 1
+        elif user_team_score < max_other_score:
+            # User's team score is less than at least one other team - loss
+            lost = True
+            losses += 1
+        else:
+            # User's team score equals the highest other score - draw
+            draw = True
+            draws += 1
+
+        # Get average rating by others for this match (excluding self-ratings)
+        avg_rating_by_others = Rating.objects.filter(
+            match=match,
+            rated_user=user
+        ).exclude(
+            rater_user=user
+        ).aggregate(avg=Avg('score'))['avg']
+
+        # Get self-rating for this match
+        self_rating = Rating.objects.filter(
+            match=match,
+            rater_user=user,
+            rated_user=user
+        ).first()
+
+        match_data.append({
+            'match_id': match.id,
+            'date': match.datetime.strftime("%Y-%m-%d"),
+            'datetime': match.datetime.strftime("%Y-%m-%dT%H:%M"),
+            'location': match.location,
+            'won': won,
+            'lost': lost,
+            'draw': draw,
+            'user_team_score': user_team_score,
+            'average_rating_by_others': round(avg_rating_by_others, 2) if avg_rating_by_others else None,
+            'self_rating': self_rating.score if self_rating else None,
+        })
+
+    # Calculate overall average rating by others (excluding self-ratings)
+    all_ratings_by_others = Rating.objects.filter(
+        rated_user=user
+    ).exclude(
+        rater_user=user
+    )
+    overall_avg_rating = all_ratings_by_others.aggregate(avg=Avg('score'))['avg']
+
+    # Calculate overall self-rating average
+    self_ratings = Rating.objects.filter(
+        rater_user=user,
+        rated_user=user
+    )
+    overall_avg_self_rating = self_ratings.aggregate(avg=Avg('score'))['avg']
+
+    performance_data = {
+        'total_matches': total_matches,
+        'wins': wins,
+        'losses': losses,
+        'draws': draws,
+        'overall_avg_rating_by_others': round(overall_avg_rating, 2) if overall_avg_rating else None,
+        'overall_avg_self_rating': round(overall_avg_self_rating, 2) if overall_avg_self_rating else None,
+        'matches': match_data
+    }
+
+    return JsonResponse(performance_data)
