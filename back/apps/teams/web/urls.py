@@ -5,3 +5,4 @@ app_name = "teams_web"
 urlpatterns = [
     # Add page views here
 ]
+
