@@ -1,4 +1,4 @@
-/**
+git/**
  * SPORT-ZONE Authentication Functions
  * Plain JavaScript - no Babel required
  */
