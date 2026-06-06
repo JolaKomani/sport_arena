@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sport-Zone</title>
+    <link rel="stylesheet" href="{% static 'css/common.css' %}" />
+
+    {% if vite_dev %}
+      <script type="module" src="http://localhost:5173/@vite/client"></script>
+      <script type="module" src="http://localhost:5173/src/main.jsx"></script>
+    {% else %}
+      <link rel="stylesheet" href="{% static 'dist/assets/index.css' %}" />
+      <script type="module" src="{% static 'dist/assets/app.js' %}"></script>
+    {% endif %}
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
