@@ -28,7 +28,7 @@
     padding: 48px;
     position: relative;
     width: 100%;
-    max-width: 450px;
+    max-width: var(--form-auth-max-width, 520px);
 }
 
 .form-card::before,
