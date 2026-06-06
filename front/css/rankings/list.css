@@ -1,0 +1,79 @@
+.rankings-page .rankings-section {
+  padding: 32px 0 80px;
+  padding-top: 180px;
+}
+
+.rankings-intro {
+  margin: 0 0 24px;
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.95rem;
+}
+
+.rankings-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-dark, #2a2a3e);
+  border-radius: 8px;
+  background: rgba(20, 20, 35, 0.85);
+}
+
+.rankings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.rankings-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #9ca3af);
+  border-bottom: 1px solid var(--border-dark, #2a2a3e);
+  background: rgba(15, 15, 28, 0.8);
+}
+
+.rankings-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-dark, #2a2a3e);
+  color: var(--text-white, #fff);
+}
+
+.rankings-table tbody tr:hover {
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.rankings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rank-cell {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  color: var(--neon-purple, #a855f7);
+}
+
+.rank-top .rank-cell {
+  color: var(--electric-green, #00ff88);
+}
+
+.rating-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  font-weight: 700;
+}
+
+.email-cell {
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.88rem;
+}
+
+.rankings-page .empty-state,
+.rankings-page .error-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted, #9ca3af);
+}
