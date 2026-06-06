@@ -2,24 +2,37 @@ import json
 
 from django.db.models import Avg
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
 
+from apps.core.auth import jwt_optional, jwt_required, permission_required, role_required
+from apps.core.services.audit import get_client_ip, log_audit
+from apps.core.services.auth_tokens import issue_token_pair
+from apps.core.services.jwt_auth import user_payload
+from apps.core.services.notifications import unread_count
+from apps.core.services.profiles import ensure_user_profile
+from apps.core.services.rbac import ensure_player_role
+from apps.core.services.tokens import revoke_refresh_token, revoke_user_tokens
+from apps.core.models import AuditLog
+from apps.matches.repositories.match_repository import match_repository
+from apps.ratings.repositories.rating_repository import rating_repository
+from apps.teams.repositories.team_repository import team_repository
 from apps.users.models import User
+from apps.users.repositories import login_history_repository, user_repository
 
 
 @csrf_exempt
+@permission_required('users.view')
 def user_list_api(request):
-    users = User.objects.all()
-
-    users_list = list(users.values("id", "first_name", "last_name", "email", "phone"))
+    users_list = list(user_repository.list_values("id", "first_name", "last_name", "email", "phone"))
 
     return HttpResponse(json.dumps(users_list), content_type="application/json")
 
 
 @csrf_exempt
+@permission_required('users.view')
 def user_detail_api(request, pk):
-    user = User.objects.filter(pk=pk).first()
+    user = user_repository.get_by_pk(pk)
     if not user:
         return HttpResponse("user not found", status=404)
 
@@ -47,34 +60,41 @@ def user_create_api(request):
     if not all((first_name, last_name, email, password)):
         return HttpResponse('first_name, last_name, email and password are required')
 
-    if User.objects.filter(email=email).exists():
+    if user_repository.exists_by_email(email):
         return HttpResponse('User with this email exists')
 
     user = User(email=email, first_name=first_name, last_name=last_name, phone=phone)
     user.set_password(password)
-    user.save()
+    user_repository.save(user)
+
+    ensure_user_profile(user, actor=user)
+    ensure_player_role(user, actor=user)
+    log_audit(request, AuditLog.ACTION_CREATE, 'user', user.id)
 
     login(request, user)
+    tokens = issue_token_pair(user)
 
-    return HttpResponse('User created successfully')
+    return JsonResponse({
+        'message': 'User created successfully',
+        **tokens,
+        'user': user_payload(user),
+    })
 
 
 @csrf_exempt
+@permission_required('users.update_self')
 def user_update_api(request):
     """Update user profile. Requires authentication and user can only update their own profile."""
-    if not request.user.is_authenticated:
-        return HttpResponse('Authentication required', status=401)
-
     data = json.loads(request.body)
 
     user_id = data.get('user_id')
     if not user_id:
         return HttpResponse('user_id is required', status=400)
 
-    user = User.objects.filter(pk=user_id).first()
+    user = user_repository.get_by_pk(user_id)
     if not user:
         return HttpResponse('user not found', status=404)
-
+    
     # Ensure user can only update their own profile
     if request.user.id != user.id:
         return HttpResponse('You can only update your own profile', status=403)
@@ -91,31 +111,32 @@ def user_update_api(request):
         user.last_name = last_name
     if email:
         # Check if email is already taken by another user
-        if User.objects.filter(email=email).exclude(id=user.id).exists():
+        if user_repository.exists_by_email_excluding(email, user.id):
             return HttpResponse('Email already exists', status=400)
         user.email = email
-    if phone:
-        user.phone = phone
+    if phone is not None:
+        user.phone = phone or None
     if password:
         # Update password
         user.set_password(password)
-        user.save()
+        user_repository.save(user)
         return HttpResponse('User updated successfully')
-
-    user.save()
+    
+    user_repository.save(user)
     return HttpResponse('User updated successfully')
 
 
 @csrf_exempt
+@role_required('admin')
 def user_delete_api(request):
     data = json.loads(request.body)
     user_id = data.get('user_id')
     if not user_id:
         return HttpResponse('user_id is required')
-    user = User.objects.filter(pk=user_id).first()
+    user = user_repository.get_by_pk(user_id)
     if not user:
         return HttpResponse('user not found')
-    user.delete()
+    user_repository.delete(user)
     return HttpResponse('User deleted successfully')
 
 
@@ -131,48 +152,60 @@ def user_login_api(request):
 
     # Use Django's authenticate() - pass email as 'username' since USERNAME_FIELD='email'
     user = authenticate(request, username=email, password=password)
-
+    
     if user is None:
         return HttpResponse('Invalid email or password', status=401)
 
     login(request, user)
+    ensure_user_profile(user, actor=user)
+    ensure_player_role(user, actor=user)
+    tokens = issue_token_pair(user)
+    login_history_repository.create(
+        user=user,
+        ip_address=get_client_ip(request),
+        user_agent=(request.META.get('HTTP_USER_AGENT') or '')[:255],
+        succeeded=True,
+        created_by=user,
+        updated_by=user,
+    )
+    log_audit(request, AuditLog.ACTION_CREATE, 'session', user.id)
 
     return JsonResponse({
         'message': 'Login successful',
-        'user': {
-            'id': user.id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email
-        }
+        'user': user_payload(user),
+        **tokens,
     })
 
 
 @csrf_exempt
+@jwt_optional
 def user_logout_api(request):
-    """Logout API - uses Django's logout()"""
+    """Logout API — revoke refresh token(s) and clear session."""
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+    refresh_value = data.get('refresh_token') or data.get('token')
+    if refresh_value:
+        revoke_refresh_token(refresh_value)
+    user = getattr(request, 'user', None)
+    if user and getattr(user, 'is_authenticated', False):
+        revoke_user_tokens(user)
     logout(request)
     return HttpResponse('Logged out successfully')
 
 
 @csrf_exempt
+@jwt_required
 def user_me_api(request):
-    """Get current logged in user via request.user"""
-    if not request.user.is_authenticated:
-        return HttpResponse('Not authenticated', status=401)
-
     user = request.user
-    return JsonResponse({
-        'id': user.id,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'email': user.email,
-        'phone': user.phone,
-        'full_name': user.full_name
-    })
+    payload = user_payload(user)
+    payload['unread_notifications'] = unread_count(user)
+    return JsonResponse(payload)
 
 
 @csrf_exempt
+@jwt_required
 def user_avg_rating_api(request):
     data = json.loads(request.body)
 
@@ -181,11 +214,11 @@ def user_avg_rating_api(request):
     if not player_id:
         return HttpResponse("player_id is required", status=400)
 
-    player = User.objects.filter(id=player_id).first()
+    player = user_repository.get_by_id(player_id)
     if not player:
         return HttpResponse("User not found", status=404)
 
-    ratings = player.received_ratings.all()
+    ratings = rating_repository.received_ratings(player)
 
     if not ratings.exists():
         return HttpResponse("This player has no ratings yet", status=404)
@@ -196,88 +229,85 @@ def user_avg_rating_api(request):
 
 
 @csrf_exempt
+@jwt_optional
 def players_avg_ratings_api(request):
     """Get average ratings (by others, excluding self-ratings) for multiple players.
-    If squad_id is provided, only include ratings from matches in that squad."""
-    from apps.ratings.models import Rating
-    from apps.matches.models import Match
+    If squad_id is provided, only include ratings from that squad."""
+    from apps.core.services.ratings_stats import compute_avg_ratings
 
-    if request.method == 'GET':
-        player_ids = request.GET.get('player_ids', '')
-        squad_id = request.GET.get('squad_id')
+    if request.method != 'GET':
+        return HttpResponse("Method not allowed", status=405)
 
-        if not player_ids:
-            return HttpResponse("player_ids parameter is required", status=400)
+    player_ids = request.GET.get('player_ids', '')
+    squad_id = request.GET.get('squad_id')
 
+    if not player_ids:
+        return HttpResponse("player_ids parameter is required", status=400)
+
+    try:
+        player_id_list = [int(id.strip()) for id in player_ids.split(',') if id.strip()]
+    except ValueError:
+        return HttpResponse("Invalid player_ids format", status=400)
+
+    if not player_id_list:
+        return HttpResponse("No valid player IDs provided", status=400)
+
+    squad_id_int = None
+    if squad_id:
         try:
-            player_id_list = [int(id.strip()) for id in player_ids.split(',') if id.strip()]
-        except ValueError:
-            return HttpResponse("Invalid player_ids format", status=400)
+            squad_id_int = int(squad_id)
+        except (ValueError, TypeError):
+            return HttpResponse("Invalid squad_id format", status=400)
 
-        if not player_id_list:
-            return HttpResponse("No valid player IDs provided", status=400)
-
-        # Get matches for the squad if squad_id is provided
-        squad_matches = None
-        if squad_id:
-            try:
-                squad_id_int = int(squad_id)
-                from apps.squads.models import Squad
-                squad = Squad.objects.filter(id=squad_id_int).first()
-                if squad:
-                    squad_matches = Match.objects.filter(squad=squad)
-            except (ValueError, TypeError):
-                return HttpResponse("Invalid squad_id format", status=400)
-
-        players = User.objects.filter(id__in=player_id_list)
-        ratings_data = {}
-
-        for player in players:
-            # Base query for ratings by others (excluding self-ratings)
-            ratings_query = Rating.objects.filter(
-                rated_user=player
-            ).exclude(
-                rater_user=player
-            )
-
-            # Filter by squad matches if squad_id is provided
-            if squad_matches is not None:
-                ratings_query = ratings_query.filter(match__in=squad_matches)
-
-            # Get average rating
-            avg_rating = ratings_query.aggregate(avg=Avg('score'))['avg']
-
-            # Get rating count
-            rating_count = ratings_query.count()
-
-            ratings_data[player.id] = {
-                'player_id': player.id,
-                'average_rating': round(avg_rating, 2) if avg_rating else None,
-                'rating_count': rating_count
-            }
-
-        return JsonResponse(ratings_data)
-
-    return HttpResponse("Method not allowed", status=405)
+    return JsonResponse(compute_avg_ratings(player_id_list, squad_id_int))
 
 
 @csrf_exempt
+@jwt_optional
+def global_rankings_api(request):
+    """Top players by global average rating."""
+    from apps.core.services.ratings_stats import compute_all_rankings, compute_global_rankings
+
+    if request.method != 'GET':
+        return HttpResponse("Method not allowed", status=405)
+
+    if request.GET.get('all', '').lower() in ('1', 'true', 'yes'):
+        rankings = compute_all_rankings()
+        return JsonResponse({'rankings': rankings, 'total': len(rankings)})
+
+    try:
+        limit = min(int(request.GET.get('limit', 10)), 50)
+    except (TypeError, ValueError):
+        limit = 10
+
+    return JsonResponse({'rankings': compute_global_rankings(limit), 'limit': limit})
+
+
+@csrf_exempt
+@jwt_optional
+def rankings_export_api(request):
+    from apps.core.services.data_export import build_export_response
+    from apps.core.services.export_collectors import RANKING_EXPORT_HEADERS, collect_ranking_export_rows
+
+    if request.method != 'GET':
+        return HttpResponse("Method not allowed", status=405)
+
+    fmt = request.GET.get('format', 'csv')
+    rows = collect_ranking_export_rows()
+    return build_export_response('player_rankings', fmt, RANKING_EXPORT_HEADERS, rows)
+
+
+@csrf_exempt
+@jwt_required
 def user_performance_api(request):
     """Get performance statistics for the logged-in user"""
-    if not request.user.is_authenticated:
-        return HttpResponse("Authentication required", status=401)
-
-    from apps.matches.models import Match
-    from apps.ratings.models import Rating
-    from apps.teams.models import Team
-    from django.db.models import Avg, Q
+    from django.db.models import Avg
 
     user = request.user
 
-    # Get all matches where user played (user is in a team that's in a match)
-    user_teams = Team.objects.filter(members=user)
-    matches = Match.objects.filter(teams__in=user_teams).distinct().order_by('datetime')
-
+    user_teams = team_repository.filter_by_member(user)
+    matches = match_repository.filter_by_teams(user_teams)
+    
     # Calculate statistics
     # Only count matches where all teams have scores filled
     total_matches = 0
@@ -285,43 +315,43 @@ def user_performance_api(request):
     losses = 0
     draws = 0
     match_data = []
-
+    
     for match in matches:
         # Get the team the user was in for this match
         user_team = match.teams.filter(members=user).first()
         if not user_team:
             continue
-
+        
         user_team_score = user_team.score if user_team.score is not None else None
-
+        
         # Skip matches where user's team has no score
         if user_team_score is None:
             continue
-
+        
         # Check if all other teams have scores
         other_teams = match.teams.exclude(id=user_team.id)
         all_teams_have_scores = True
         other_team_scores = []
-
+        
         for other_team in other_teams:
             other_score = other_team.score if other_team.score is not None else None
             if other_score is None:
                 all_teams_have_scores = False
                 break
             other_team_scores.append(other_score)
-
+        
         # Only count matches where all teams have scores
         if not all_teams_have_scores:
             continue
-
+        
         total_matches += 1
-
+        
         # Determine result: win, loss, or draw
         max_other_score = max(other_team_scores) if other_team_scores else -1
         won = False
         lost = False
         draw = False
-
+        
         if user_team_score > max_other_score:
             # User's team has the highest score - win
             won = True
@@ -334,22 +364,14 @@ def user_performance_api(request):
             # User's team score equals the highest other score - draw
             draw = True
             draws += 1
-
+        
         # Get average rating by others for this match (excluding self-ratings)
-        avg_rating_by_others = Rating.objects.filter(
-            match=match,
-            rated_user=user
-        ).exclude(
-            rater_user=user
-        ).aggregate(avg=Avg('score'))['avg']
+        avg_rating_by_others = rating_repository.avg_for_match_rated_user(
+            match, user, exclude_rater=user
+        )
 
-        # Get self-rating for this match
-        self_rating = Rating.objects.filter(
-            match=match,
-            rater_user=user,
-            rated_user=user
-        ).first()
-
+        self_rating = rating_repository.get_self_rating_for_match(match, user)
+        
         match_data.append({
             'match_id': match.id,
             'date': match.datetime.strftime("%Y-%m-%d"),
@@ -362,22 +384,14 @@ def user_performance_api(request):
             'average_rating_by_others': round(avg_rating_by_others, 2) if avg_rating_by_others else None,
             'self_rating': self_rating.score if self_rating else None,
         })
-
+    
     # Calculate overall average rating by others (excluding self-ratings)
-    all_ratings_by_others = Rating.objects.filter(
-        rated_user=user
-    ).exclude(
-        rater_user=user
-    )
+    all_ratings_by_others = rating_repository.queryset_for_rated_user(user, exclude_rater=user)
     overall_avg_rating = all_ratings_by_others.aggregate(avg=Avg('score'))['avg']
 
-    # Calculate overall self-rating average
-    self_ratings = Rating.objects.filter(
-        rater_user=user,
-        rated_user=user
-    )
+    self_ratings = rating_repository.list_self_ratings(user)
     overall_avg_self_rating = self_ratings.aggregate(avg=Avg('score'))['avg']
-
+    
     performance_data = {
         'total_matches': total_matches,
         'wins': wins,
@@ -387,5 +401,5 @@ def user_performance_api(request):
         'overall_avg_self_rating': round(overall_avg_self_rating, 2) if overall_avg_self_rating else None,
         'matches': match_data
     }
-
+    
     return JsonResponse(performance_data)
