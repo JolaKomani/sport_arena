@@ -1,0 +1,3 @@
+/* Reuse existing styling by importing the legacy CSS. */
+@import "../../css/common.css";
+
