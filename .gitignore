@@ -208,3 +208,5 @@ __marimo__/
 
 # Pycharm
 .idea/
+
+front/node_modules/
