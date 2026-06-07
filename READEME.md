@@ -1,4 +1,4 @@
-# Sport Zone
+# Sport Arena
 
 # Frontend (React + Vite)
 ```
