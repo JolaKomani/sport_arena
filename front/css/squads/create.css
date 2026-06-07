@@ -8,6 +8,10 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100vw;
+    align-self: stretch;
+    box-sizing: border-box;
 }
 
 /* ===== PAGE HERO ===== */
@@ -62,12 +66,54 @@
     flex: 1;
 }
 
+/* Center the squad create form in the viewport */
+.create-squad-page .create-section {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+    box-sizing: border-box;
+}
+
+.create-squad-page .page-hero {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.create-squad-page .page-hero .container {
+    width: 100%;
+    max-width: var(--form-layout-max-width, 1140px);
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .create-form-container {
-    max-width: 700px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: var(--form-layout-max-width, 1140px);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
 }
 
 /* Form Card */
+.create-squad-page .create-form-container > .form-card,
+.create-squad-page .create-section > .form-card {
+    width: 100%;
+    max-width: var(--form-layout-max-width, 1140px);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    padding: 48px;
+    position: relative;
+    animation: fadeInUp 0.8s ease 0.2s backwards;
+}
+
 .form-card {
     background: var(--bg-card);
     border: 1px solid var(--border-dark);
@@ -76,6 +122,8 @@
     animation: fadeInUp 0.8s ease 0.2s backwards;
 }
 
+.create-squad-page .create-form-container > .form-card::before,
+.create-squad-page .create-section > .form-card::before,
 .form-card::before {
     content: '';
     position: absolute;
@@ -416,6 +464,99 @@
 .empty-players-hint-text {
     font-size: 0.95rem;
     line-height: 1.6;
+}
+
+/* Add players dropdown */
+.player-select {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-dark);
+    color: var(--text-white);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.player-select:hover,
+.player-select:focus {
+    outline: none;
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.player-select option {
+    background: var(--bg-card);
+    color: var(--text-white);
+}
+
+.no-players-available {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-top: 8px;
+}
+
+.new-players-pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.new-player-chip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(0, 212, 255, 0.06);
+    border: 1px solid rgba(0, 212, 255, 0.25);
+}
+
+.new-player-chip-name {
+    font-weight: 600;
+    color: var(--text-white);
+    flex: 1;
+}
+
+.new-player-chip-email {
+    font-size: 0.85rem;
+    color: var(--text-gray);
+}
+
+.player-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--bg-dark);
+    flex-shrink: 0;
+}
+
+.remove-player-btn {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--border-dark);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.remove-player-btn:hover {
+    border-color: var(--error-red);
+    color: var(--error-red);
+    background: rgba(255, 71, 87, 0.1);
 }
 
 /* ===== FORM ACTIONS ===== */
