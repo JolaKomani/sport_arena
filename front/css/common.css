@@ -1,5 +1,5 @@
 /* ============================================
-   SPORT-ARENA Common Styles - "ELECTRIC ARENA"
+   SPORT-ZONE Common Styles - "ELECTRIC ARENA"
    Shared styles across all pages
    ============================================ */
 
@@ -32,6 +32,9 @@
     --radius: 4px;
     --radius-md: 8px;
     --radius-lg: 16px;
+
+    --form-layout-max-width: 1140px;
+    --form-auth-max-width: 520px;
 }
 
 /* ===== RESET & BASE ===== */
@@ -174,6 +177,7 @@ a:hover {
     display: flex;
     align-items: center;
 }
+
 .breadcrumb-section .container {
     display: flex;
     align-items: center;
@@ -185,6 +189,13 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     width: 100%;
+}
+
+.breadcrumb-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .breadcrumb {
@@ -323,6 +334,27 @@ a:hover {
     box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.1);
 }
 
+.notification-delete-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.notification-delete-btn:hover {
+    color: var(--error-red, #ff4757);
+    border-color: rgba(255, 71, 87, 0.4);
+    background: rgba(255, 71, 87, 0.1);
+}
+
 .btn-primary {
     background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
     color: var(--bg-deep);
@@ -400,6 +432,23 @@ a:hover {
     justify-content: center;
     z-index: 2000;
     animation: fadeIn 0.3s ease;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: default;
+}
+
+.modal-overlay > .modal-container,
+.modal-overlay > .modal-content {
+    position: relative;
+    z-index: 1;
 }
 
 .modal-container,
@@ -558,33 +607,6 @@ a:hover {
     }
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
 /* ===== SECTION HEADER ===== */
 .section-header {
     text-align: center;
@@ -640,28 +662,24 @@ a:hover {
 
 .footer-title {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.95rem;
     color: var(--text-white);
+    margin-bottom: 24px;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin-bottom: 16px;
 }
 
 .footer-links {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+}
+
+.footer-links li {
+    margin-bottom: 12px;
 }
 
 .footer-links a {
     color: var(--text-gray);
-    font-size: 0.9rem;
-}
-
-.footer-links a:hover {
-    color: var(--neon-blue);
+    font-size: 0.95rem;
 }
 
 .footer-bottom {
@@ -672,9 +690,15 @@ a:hover {
     border-top: 1px solid var(--border-dark);
 }
 
+.footer-simple .footer-bottom {
+    border-top: none;
+    padding-top: 0;
+    justify-content: center;
+}
+
 .footer-copyright {
     color: var(--text-dim);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
 .footer-social {
@@ -683,13 +707,15 @@ a:hover {
 }
 
 .social-link {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--border-dark);
     color: var(--text-gray);
+    font-size: 1.1rem;
     transition: all 0.3s;
 }
 
@@ -698,3 +724,269 @@ a:hover {
     color: var(--neon-blue);
     box-shadow: var(--glow-blue);
 }
+
+/* ===== FORM STYLES ===== */
+
+/* Wide, centered form layout (squads, matches, etc.) */
+.create-form-container,
+.edit-form-container {
+    box-sizing: border-box;
+    width: min(100%, var(--form-layout-max-width));
+    max-width: var(--form-layout-max-width);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.create-form-container > form,
+.edit-form-container > form,
+.create-form-container > .form-card,
+.edit-form-container > .form-card {
+    width: 100%;
+}
+
+/* Auth forms (login / register) */
+.form-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.form-container > .form-card {
+    width: 100%;
+    max-width: var(--form-auth-max-width);
+}
+
+main.page > .container > form.form {
+    box-sizing: border-box;
+    width: min(100%, var(--form-layout-max-width));
+    max-width: var(--form-layout-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    padding: 48px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.label-icon {
+    font-size: 1rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-dark);
+    color: var(--text-white);
+    font-family: 'Exo 2', sans-serif;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.form-input::placeholder {
+    color: var(--text-dim);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.form-input.error,
+.squad-select.error,
+.team-name-input.error {
+    border-color: var(--error-red) !important;
+    box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.15);
+}
+
+.form-error {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--error-red);
+    font-weight: 500;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 24px;
+    color: var(--text-gray);
+}
+
+/* Server Error */
+.server-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    color: var(--error-red);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+}
+
+.error-icon {
+    font-size: 1.2rem;
+}
+
+/* ===== CARD STYLES ===== */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    transition: all 0.3s;
+}
+
+.card:hover {
+    border-color: var(--neon-blue);
+    transform: translateY(-4px);
+}
+
+/* ===== COMMON ANIMATIONS ===== */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* ===== RESPONSIVE - COMMON ===== */
+@media (max-width: 1024px) {
+    .footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+
+    .section-title {
+        font-size: 2rem;
+    }
+
+    .footer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-bottom {
+        flex-direction: column;
+        gap: 24px;
+        text-align: center;
+    }
+
+    .breadcrumb-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .breadcrumb {
+        flex-wrap: wrap;
+        font-size: 0.75rem;
+    }
+
+    .breadcrumb-section .btn-sm {
+        align-self: flex-end;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+

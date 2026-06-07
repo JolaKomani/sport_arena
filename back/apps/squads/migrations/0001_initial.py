@@ -13,21 +13,21 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Team',
+            name='Squad',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('name', models.CharField(max_length=50)),
-                ('score', models.IntegerField(blank=True, null=True)),
+                ('name', models.CharField(db_index=True, max_length=120)),
+                ('is_public', models.BooleanField(default=False)),
             ],
             options={
-                'db_table': 'Teams',
+                'db_table': 'Squads',
             },
         ),
         migrations.CreateModel(
-            name='TeamMember',
+            name='SquadAdmin',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
@@ -35,7 +35,19 @@ class Migration(migrations.Migration):
                 ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
             ],
             options={
-                'db_table': 'TeamMembers',
+                'db_table': 'SquadAdmins',
+            },
+        ),
+        migrations.CreateModel(
+            name='SquadMember',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
+            ],
+            options={
+                'db_table': 'SquadMembers',
             },
         ),
     ]

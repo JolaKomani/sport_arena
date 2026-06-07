@@ -1,6 +1,7 @@
+from django.conf import settings
 from django.shortcuts import render
 
 
 def home(request):
-    return render(request, "home/home.html")
+    return render(request, "spa.html", {"vite_dev": settings.DEBUG})
 

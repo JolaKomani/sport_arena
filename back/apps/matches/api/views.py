@@ -1,22 +1,50 @@
+import json
+
+from datetime import datetime
+
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from apps.core.auth import jwt_optional, permission_required
+from apps.core.services.advanced_search import (
+    apply_match_search,
+    match_search_meta,
+    parse_match_search_params,
+)
+from apps.core.services.audit import log_audit
+from apps.core.services.match_participants import sync_match_participants
+from apps.core.models import AuditLog
+from apps.core.repositories.match_participant_repository import match_participant_repository
+from apps.core.services.notifications import notify_match_players, notify_users_added_to_match
+from apps.core.utils import stamp_audit
+from apps.matches.serializers import serialize_matches, serialize_match
+from apps.matches.models import Match
+from apps.matches.repositories import match_repository
+from apps.squads.repositories import squad_repository
+from apps.teams.models import Team
+from apps.teams.repositories import team_repository
+from apps.users.repositories import user_repository
+from apps.squads.permissions import can_view_squad_matches, can_modify_squad_matches
+
 
 @csrf_exempt
 @jwt_optional
 @can_view_squad_matches
 def match_list_api(request):
     squad_id = request.GET.get('squad_id')
-
+    
     if not squad_id:
         return HttpResponse("squad_id parameter is required", status=400)
-
+    
     try:
         squad_id = int(squad_id)
     except (ValueError, TypeError):
         return HttpResponse("Invalid squad_id parameter", status=400)
-
+    
     squad = squad_repository.get_by_id(squad_id)
     if not squad:
         return HttpResponse("Squad not found", status=404)
-
+    
     params = parse_match_search_params(request)
     matches = match_repository.list_by_squad_id(squad_id)
     matches = apply_match_search(matches, params)
@@ -35,7 +63,7 @@ def match_detail_api(request, pk):
     match = match_repository.get_by_id(pk)
     if not match:
         return HttpResponse("Match not found", status=404)
-
+    
     # Check access: public squads or user is admin/member
     squad = match.squad
     if squad:
