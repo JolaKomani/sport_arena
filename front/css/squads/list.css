@@ -111,6 +111,12 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     margin-bottom: 60px;
+    transition: opacity 0.2s ease;
+}
+
+.squads-grid.is-refreshing {
+    opacity: 0.65;
+    pointer-events: none;
 }
 
 /* Squad Card */
@@ -118,9 +124,8 @@
     background: var(--bg-card);
     border: 1px solid var(--border-dark);
     padding: 0;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
     position: relative;
-    animation: fadeInUp 0.6s ease backwards;
     overflow: hidden;
     display: flex;
     flex-direction: column;
